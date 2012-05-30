@@ -1,0 +1,51 @@
+<?php
+
+ini_set('error_reporting', E_ALL);
+ini_set('display_errors', 'On');
+
+// The default phpBB inclusion protection - required
+define('IN_PHPBB', true);
+$phpbb_root_path = '';
+$phpEx = substr(strrchr(__FILE__, '.'), 1);
+
+
+include($phpbb_root_path . 'common.' . $phpEx);
+include($phpbb_root_path . 'includes/functions_posting.' . $phpEx);
+include($phpbb_root_path . 'phpBBFunctions.php');
+
+$user->session_begin();
+$auth->acl($user->data);
+$user->setup();
+
+// Backup the details of the logged in user
+$backup = array(
+  'user'   => $user,
+  'auth'   => $auth,
+);
+
+// Get the data for the System user
+$sql = "SELECT * FROM " . USERS_TABLE . " WHERE username = 'System'";
+$result = $db->sql_query($sql);
+$row = $db->sql_fetchrow($result);
+$db->sql_freeresult($result);
+
+$user->data = array_merge($user->data, $row);
+$auth->acl($user->data);
+
+// Overwrite user's IP
+$user->ip = '192.168.0.0';
+
+
+$forumtoPost = 2;
+
+$msgSubject = "test subject from function";
+$msgText = "Here is an automatic post from my new function code";
+
+$newPostID = createPost ($forumtoPost,$msgSubject,$msgText);
+
+echo "post id is $newPostID" . 
+
+// Restore the original backed up logged in user data
+extract($backup);
+
+?>
