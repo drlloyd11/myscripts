@@ -2,6 +2,7 @@
 include_once('simple_html_dom.php');
 include('config.php');
 include('kittenconfig.php');
+include("php-postlib.php");
 $dbms = 'mysqli';
 $dbhost = 'localhost';
 $dbport = '3306';
@@ -13,75 +14,66 @@ $tableIs = 'netherData';
 echo $argv[1]."-\n";
 $con = mysql_connect($dbhost, $dbuser,$dbpasswd);
 mysql_select_db("phptrans");
+if ($argc <3){
+	echo"exit \n";
+	exit();
+}
+$subGroup = $argv[1];   
+echo $subGroup;
+  
 
-$dirName = $argv[1];   
-echo $dirName;
-try{
-	//$conHandle= dbAccess();
-}
-catch (Exception $x){
-	echo $ex."\n	";
-}
 $fullUserName = null;
 $fullDate=null;
 $fullPost =  null;
 $fullForum = null;
 $fullTopic = null;
 $fullUrl = null;
-//if ($handle = opendir($dirName)) {
+$fullFileName = null;
+$processed =0;
+$forumToGet = $argv[2];
 //	while (false !== ($entry = readdir($handle))) {
 date_default_timezone_set("America/New_York");
-foreach(glob($dirName."*.html") as $entry){
-	echo ">>".$entry."\n";
-	$fullFileName =  $entry;
-	if ($entry != "." && $entry != ".." && is_file($fullFileName)) {
-
-		//echo "filename ".$fullFileName."\n";
-		// get DOM from URL or file
-		$html = file_get_html($fullFileName);
-		if(strstr( $html->plaintext," This post is missing or couldn't be ") != FALSE){
-			continue;
+$phpOld = "yuku";
+try{
+	echo "get topic\n";
+	$topicsRawList =getTopicsWithForum($phpOld,0,-1,$forumToGet);
+	$topicList = array();
+	while($row = mysql_fetch_array(  $topicsRawList )){
+		$topicTitle =   $row['topic_title'];
+		$topicID =   $row['topic_id'];
+		$topicList[$topicID] = $topicTitle;
+	}
+		foreach($topicList as $curTopicID  =>$curTopicName)  
+		{
+			$count =0;
+			echo $curTopicID."==\n";
+			$postsByTopic = getPostByTopic($phpOld ,$curTopicID);
+		//	$postsTextByTopic = getPostTextByTopic($phpOld ,$curTopicID);
+			while($row = mysql_fetch_array(  $postsByTopic )){
+				//
+				//
+				$postText = getSinglePostText($phpOld,$row['post_id']);
+	  		$queryString ="INSERT INTO phptrans.posts ( username, topic_title, postdate, post_index,post_text,notes)"; 
+	  				$queryString =$queryString."VALUES (\"%s\",\"%s\",%s,\"%s\", \"%s\",\"%s\"  )";
+	  		
+	  		$query = sprintf($queryString,
+	  				mysql_real_escape_string( $row['post_username']),mysql_real_escape_string($curTopicName), $row['post_time'],$count, mysql_real_escape_string ($postText['post_text']),$subGroup);
+	  			//print $query."..\n\n";
+	  		$result = mysql_query($query )
+	  				or die(mysql_error());
+	  		$count =  $count+1;
+			}
 		}
-		$subject = $html->find('tr');
-		//var_dump($subject);
-	$length = count($subject);
-	$title = $subject[0]->find('b');
-	//print "\ntitle=".$title[0]->plaintext."\n";
-	for ($i = 2; $i < $length -2	; $i+=2) {
-  		//print $subject[$i]."\n";
-  		
-  		$panels = $subject[$i]->find('td');
-  		$users = $panels[0]->find('a[name]');
-  		$userName = $users[0];
-  		list($un,$two) = sscanf($userName,"<a name=%s>%s");
-  		//print "Number:".$un[0]."\n";
-  		$count = $un[1];
-  		
-  		$userName= $userName->plaintext;
-  		//print "Name:".$userName."\n";
-  		//print strpbrk($userName,"=");
-  		//print $userName->plaintext."\n";
-  		//print $users[0]."\n";
-  		$hr = $subject[$i +1];
-  		$text= $hr->find('font');
-  		//$body = $text[0]->find('font');
-  		$body = $text[4];
-  		//print $body;
-  		$postDate  =$text[3]->plaintext;
-  		#print "\n--->".$postDate."<---\n";
-  		list($dates,$month,$day,$year) = sscanf($postDate,"%s %s %d,%d %s");
-  		#print "\n month:-->".$month."<--\n";
-  		#print "\n day:-->".$day."<--\n";
-  		#print "\n year:-->".$year."<--\n";
-  		$postTime= strtotime("$day $month $year" );
-  		
-  		$query ="";
-  		$result = mysql_query($query )
-  				or die(mysql_error());
-
   		//print $hr->outerhtml."\n";
   		//print "\n post time $postTime\n";
 }
+catch (Exception $ex){
+	echo $ex;
+	echo $fullFileName."...\n";
+}
+	
+echo "exit\n";
+exit();
 	//	foreach($subject as $name){
 		//	echo $name."-------------\n";
 		//}
@@ -103,7 +95,7 @@ echo $subject[0]."-------------\n";
 		
 			}
 			*/
-	}
+	
 
 	
-}
+

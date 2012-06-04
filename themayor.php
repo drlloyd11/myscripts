@@ -30,7 +30,7 @@ function testOne(){
 	echo "post id is now  $newPostID" .
 	// Restore the original backed up logged in user data
 	extract($backup);
-	updatePostTime("full_clean", $newPostID,891239402);
+	updatePostTime($phpTargetToUse, $newPostID,891239402);
 }
 
 function updatePostTime($phpSrcx,$postId,$time){
@@ -38,7 +38,7 @@ function updatePostTime($phpSrcx,$postId,$time){
 	include('kittenconfig.php');
 	$con = mysql_connect($dbhost, $dbuser,$dbpasswd);
 	mysql_select_db($phpSrcx);
-	$query = "update full_clean.phpbb_posts set post_time=  ".$time." where post_id =".$postId;
+	$query = "update ".$phpSrcx.".phpbb_posts set post_time=  ".$time." where post_id =".$postId;
 //	echo $query;
 	$result = mysql_query($query )
 	or die(mysql_error());
@@ -51,7 +51,7 @@ function getTopics($phpSrcx,$topicStart,$topicStop){
 	include('config.php');
 	include('kittenconfig.php');
 	$con = mysql_connect($dbhost, $dbuser,$dbpasswd);
-	mysql_select_db($phpSrc);
+	mysql_select_db($phpSrcx);
 	$query = "SELECT * FROM ".$phpSrcx.".phpbb_topics where topic_id >=$topicStart and topic_id <$topicStop";
 	$result = mysql_query($query )
 	or die(mysql_error());
@@ -96,13 +96,13 @@ function updateTopicTime($phpSrcx,$topicId,$time){
 	include('kittenconfig.php');
 	$con = mysql_connect($dbhost, $dbuser,$dbpasswd);
 	mysql_select_db($phpSrcx);
-	$query = "update full_clean.phpbb_topics set topic_time=  ".$time." where topic_id =".$topicId;
+	$query = "update ".$phpSrcx.".phpbb_topics set topic_time=  ".$time." where topic_id =".$topicId;
 	$result = mysql_query($query )
 	or die(mysql_error());
-	$query = "update full_clean.phpbb_topics set topic_last_post_time=  ".$time." where topic_id =".$topicId;
+	$query = "update ".$phpSrcx.".phpbb_topics set topic_last_post_time=  ".$time." where topic_id =".$topicId;
 	$result = mysql_query($query )
 	or die(mysql_error());
-	$query = "update full_clean.phpbb_topics set topic_last_view_time=  ".$time." where topic_id =".$topicId;
+	$query = "update ".$phpSrcx.".phpbb_topics set topic_last_view_time=  ".$time." where topic_id =".$topicId;
 	$result = mysql_query($query )
 	or die(mysql_error());
 	//$row = mysql_fetch_array(  $result );
@@ -164,8 +164,8 @@ function createPost ($forum,$msgSubject,$msgText,$userName,$type,$topic,$time) {
 	submit_post($type, $my_subject, $userName, POST_NORMAL, $poll, $data);
 	
 	
-	updateTopicTime("full_clean", $data['topic_id'],$time);
-	updatePostTime("full_clean", $data['post_id'],$time);
+	updateTopicTime($phpTargetToUse, $data['topic_id'],$time);
+	updatePostTime($phpTargetToUse, $data['post_id'],$time);
 	
 	return $data;
 	//return $data['post_id'];
@@ -237,8 +237,8 @@ echo $newData['topic_id'];
 echo "post id is now  $newPostID" . 
 // Restore the original backed up logged in user data
 
-updatePostTime("full_clean", $newPostID,891239402);
-updateTopicTime("full_clean", $newData['topic_id'],891239402);
+updatePostTime($phpTargetToUse, $newPostID,891239402);
+updateTopicTime($phpTargetToUse, $newData['topic_id'],891239402);
 extract($backup);
 }
 //testUpdate($user,$auth);
@@ -254,7 +254,7 @@ $backup = array(
 		'auth'   => $auth,
 );
 
-//$queryStr ="select * from phptrans.posts limit 10";
+//$queryStr ="select * from thekitt_archive.posts limit 10";
 //$result = mysql_query($queryStr )
 //or die(mysql_error());
 //get all 
@@ -262,15 +262,29 @@ include('config.php');
 include('kittenconfig.php');
 //include ('phpbb-libs.php');
 $con = mysql_connect($dbhost, $dbuser,$dbpasswd);
-mysql_select_db($phpSrc);
+mysql_select_db($phpTargetToUse);
 $postCount =1;
 $postStop =300;
 $postIndex =100;
 $run = 1;
+if ($argc <3){
+	echo "too few arguments\n";
+	exit();
+}
+$phpTargetToUse = $argv[1];
+$forumIdToUse = $argv[2];
+$forumNameToUse= $argv[3];
+if ($argc >4){  
+	$safety=true;
+}
+else
+{
+	$safety = false;
+}
 //get topics
 
-$query = "SELECT distinct topic_title  FROM phptrans.posts" ;
-mysql_select_db("phptrans");
+$query = "SELECT distinct topic_title  FROM thekitt_archive.posts" ;
+mysql_select_db("thekitt_archive");
 $result = mysql_query($query )
 or die(mysql_error());
 
@@ -284,33 +298,31 @@ while($row = mysql_fetch_array(  $result )){
 }
 //echo "--".sizeof($topicList)."\n";
 foreach ($topicList as $topic){
-	$query = "SELECT *  FROM phptrans.posts where topic_title = \"". mysql_real_escape_string($topic)."\" order by post_index;";
-	mysql_select_db("phptrans");
+	$query = "SELECT *  FROM thekitt_archive.posts where topic_title = \"". mysql_real_escape_string($topic)."\" order by post_index;";
+	mysql_select_db("thekitt_archive");
 	$result = mysql_query($query )
 	or die(mysql_error());
 	$first =1;
 	$newTopicId = null;
 	
-	echo "\nNew topic".$topic."\n"
+	echo "\nNew topic".$topic."\n";    
 	while($row = mysql_fetch_array(  $result )){
 		//echo "x \n";
-		if (strcmp($row['notes'],"archivesKitten") ==0){
-			$forumtoPost = 361;
-		} 
-		else{
-		//	echo "archivesPens\n";
-			$forumtoPost = 364; 
-		}
-		if ($first == 1){
-			$first =0;
-			mysql_select_db("full_clean");
-			$newDataList = createPost($forumtoPost,$row['topic_title'],$row['post_text'],$row['username'],"post",0,$row['postdate']);
-			$newTopicId =$newDataList['topic_id'];
-		}
-		else
-		{
-			mysql_select_db("full_clean");
-			$newData = createPost ($forumtoPost,$row['topic_title'],$row['post_text'],$row['username'],"reply",$newTopicId,$row['postdate']);
+		if (strcmp($row['notes'],$forumNameToUse) ==0){
+			$forumtoPost = $forumIdToUse;
+		 
+		
+			if ($first == 1){
+				$first =0;
+				mysql_select_db($phpTargetToUse);
+				$newDataList = createPost($forumtoPost,$row['topic_title'],$row['post_text'],$row['username'],"post",0,$row['postdate']);
+				$newTopicId =$newDataList['topic_id'];
+			}
+			else
+			{
+				mysql_select_db($phpTargetToUse);
+				$newData = createPost ($forumtoPost,$row['topic_title'],$row['post_text'],$row['username'],"reply",$newTopicId,$row['postdate']);
+			}
 		}
 
 	}
